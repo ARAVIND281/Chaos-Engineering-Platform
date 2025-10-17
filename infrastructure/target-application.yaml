@@ -1,0 +1,503 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Target Application Infrastructure for Chaos Engineering Platform - Week 1'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: chaos-platform
+    Description: Name prefix for all resources
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+    Description: EC2 instance type for web servers
+
+  MinSize:
+    Type: Number
+    Default: 2
+    MinValue: 2
+    Description: Minimum number of instances in Auto Scaling Group
+
+  MaxSize:
+    Type: Number
+    Default: 4
+    MinValue: 2
+    Description: Maximum number of instances in Auto Scaling Group
+
+  DesiredCapacity:
+    Type: Number
+    Default: 2
+    MinValue: 2
+    Description: Desired number of instances in Auto Scaling Group
+
+  KeyName:
+    Type: String
+    Description: EC2 Key Pair name for SSH access (leave empty if not needed)
+    Default: ''
+
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, '']]
+
+Mappings:
+  # Amazon Linux 2023 AMI IDs by region
+  RegionMap:
+    us-east-1:
+      AMI: ami-0c7217cdde317cfec
+    us-east-2:
+      AMI: ami-05fb0b8c1424f266b
+    us-west-1:
+      AMI: ami-0ce2cb35386fc22e9
+    us-west-2:
+      AMI: ami-008fe2fc65df48dac
+    eu-west-1:
+      AMI: ami-0905a3c97561e0b69
+    eu-central-1:
+      AMI: ami-0faab6bdbac9486fb
+    ap-southeast-1:
+      AMI: ami-0dc2d3e4c0f9ebd18
+    ap-southeast-2:
+      AMI: ami-0375ab65ee943a2a6
+    ap-northeast-1:
+      AMI: ami-0d52744d6551d851e
+
+Resources:
+  # Security Groups
+  ALBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ProjectName}-alb-sg
+      GroupDescription: Security group for Application Load Balancer
+      VpcId:
+        Fn::ImportValue: !Sub ${ProjectName}-vpc-id
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP from anywhere
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS from anywhere
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-alb-sg
+        - Key: Project
+          Value: !Ref ProjectName
+
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${ProjectName}-web-sg
+      GroupDescription: Security group for web server instances
+      VpcId:
+        Fn::ImportValue: !Sub ${ProjectName}-vpc-id
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          SourceSecurityGroupId: !Ref ALBSecurityGroup
+          Description: Allow HTTP from ALB
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-web-sg
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: ChaosTarget
+          Value: 'true'
+
+  # SSH access rule (optional)
+  WebServerSSHIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Condition: HasKeyName
+    Properties:
+      GroupId: !Ref WebServerSecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: 0.0.0.0/0
+      Description: Allow SSH from anywhere (for debugging only)
+
+  # IAM Role for EC2 Instances
+  EC2InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-ec2-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-ec2-role
+        - Key: Project
+          Value: !Ref ProjectName
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: !Sub ${ProjectName}-ec2-profile
+      Roles:
+        - !Ref EC2InstanceRole
+
+  # Application Load Balancer
+  ApplicationLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Sub ${ProjectName}-alb
+      Type: application
+      Scheme: internet-facing
+      IpAddressType: ipv4
+      Subnets:
+        - Fn::ImportValue: !Sub ${ProjectName}-public-subnet-1-id
+        - Fn::ImportValue: !Sub ${ProjectName}-public-subnet-2-id
+      SecurityGroups:
+        - !Ref ALBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-alb
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Target Group
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: !Sub ${ProjectName}-tg
+      Port: 80
+      Protocol: HTTP
+      VpcId:
+        Fn::ImportValue: !Sub ${ProjectName}-vpc-id
+      HealthCheckEnabled: true
+      HealthCheckProtocol: HTTP
+      HealthCheckPath: /
+      HealthCheckIntervalSeconds: 30
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 3
+      TargetType: instance
+      Matcher:
+        HttpCode: 200
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-tg
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Listener
+  ALBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: 80
+      Protocol: HTTP
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+
+  # Launch Template
+  LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: !Sub ${ProjectName}-launch-template
+      LaunchTemplateData:
+        ImageId: !FindInMap [RegionMap, !Ref 'AWS::Region', AMI]
+        InstanceType: !Ref InstanceType
+        IamInstanceProfile:
+          Arn: !GetAtt EC2InstanceProfile.Arn
+        SecurityGroupIds:
+          - !Ref WebServerSecurityGroup
+        KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: !Sub ${ProjectName}-web-server
+              - Key: Project
+                Value: !Ref ProjectName
+              - Key: ChaosTarget
+                Value: 'true'
+              - Key: ManagedBy
+                Value: AutoScaling
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            # Update system
+            yum update -y
+
+            # Install Apache web server
+            yum install -y httpd
+
+            # Get instance metadata
+            INSTANCE_ID=$(ec2-metadata --instance-id | cut -d " " -f 2)
+            AVAILABILITY_ZONE=$(ec2-metadata --availability-zone | cut -d " " -f 2)
+            PRIVATE_IP=$(ec2-metadata --local-ipv4 | cut -d " " -f 2)
+
+            # Create a simple HTML page with instance info
+            cat > /var/www/html/index.html <<EOF
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Chaos Engineering Target Application</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        max-width: 800px;
+                        margin: 50px auto;
+                        padding: 20px;
+                        background-color: #f0f0f0;
+                    }
+                    .container {
+                        background-color: white;
+                        padding: 30px;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }
+                    h1 {
+                        color: #2c3e50;
+                    }
+                    .info {
+                        background-color: #ecf0f1;
+                        padding: 15px;
+                        border-radius: 5px;
+                        margin: 10px 0;
+                    }
+                    .status {
+                        color: #27ae60;
+                        font-weight: bold;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Chaos Engineering Platform - Target Application</h1>
+                    <p class="status">Status: Running</p>
+                    <div class="info">
+                        <p><strong>Instance ID:</strong> $INSTANCE_ID</p>
+                        <p><strong>Availability Zone:</strong> $AVAILABILITY_ZONE</p>
+                        <p><strong>Private IP:</strong> $PRIVATE_IP</p>
+                    </div>
+                    <p>This is a highly available web application designed to demonstrate resilience through chaos engineering.</p>
+                    <p><em>This instance is part of an Auto Scaling Group and may be subject to chaos experiments.</em></p>
+                </div>
+            </body>
+            </html>
+            EOF
+
+            # Create a health check endpoint
+            cat > /var/www/html/health <<EOF
+            OK
+            EOF
+
+            # Start and enable Apache
+            systemctl start httpd
+            systemctl enable httpd
+
+            # Install CloudWatch agent
+            yum install -y amazon-cloudwatch-agent
+
+            # Configure CloudWatch agent
+            cat > /opt/aws/amazon-cloudwatch-agent/etc/config.json <<EOF
+            {
+              "metrics": {
+                "namespace": "${ProjectName}",
+                "metrics_collected": {
+                  "mem": {
+                    "measurement": [
+                      {"name": "mem_used_percent"}
+                    ],
+                    "metrics_collection_interval": 60
+                  },
+                  "disk": {
+                    "measurement": [
+                      {"name": "disk_used_percent"}
+                    ],
+                    "metrics_collection_interval": 60,
+                    "resources": [
+                      "/"
+                    ]
+                  }
+                }
+              },
+              "logs": {
+                "logs_collected": {
+                  "files": {
+                    "collect_list": [
+                      {
+                        "file_path": "/var/log/httpd/access_log",
+                        "log_group_name": "/aws/ec2/${ProjectName}/httpd/access",
+                        "log_stream_name": "{instance_id}"
+                      },
+                      {
+                        "file_path": "/var/log/httpd/error_log",
+                        "log_group_name": "/aws/ec2/${ProjectName}/httpd/error",
+                        "log_stream_name": "{instance_id}"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+            EOF
+
+            # Start CloudWatch agent
+            /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl \
+              -a fetch-config \
+              -m ec2 \
+              -s \
+              -c file:/opt/aws/amazon-cloudwatch-agent/etc/config.json
+
+  # Auto Scaling Group
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    DependsOn: ALBListener
+    Properties:
+      AutoScalingGroupName: !Sub ${ProjectName}-asg
+      LaunchTemplate:
+        LaunchTemplateId: !Ref LaunchTemplate
+        Version: !GetAtt LaunchTemplate.LatestVersionNumber
+      MinSize: !Ref MinSize
+      MaxSize: !Ref MaxSize
+      DesiredCapacity: !Ref DesiredCapacity
+      HealthCheckType: ELB
+      HealthCheckGracePeriod: 300
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub ${ProjectName}-public-subnet-1-id
+        - Fn::ImportValue: !Sub ${ProjectName}-public-subnet-2-id
+      TargetGroupARNs:
+        - !Ref TargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-asg-instance
+          PropagateAtLaunch: true
+        - Key: Project
+          Value: !Ref ProjectName
+          PropagateAtLaunch: true
+        - Key: ChaosTarget
+          Value: 'true'
+          PropagateAtLaunch: true
+
+  # Scaling Policies
+  ScaleUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 70.0
+
+  # CloudWatch Alarms for monitoring
+  HealthyHostCountAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ProjectName}-unhealthy-hosts
+      AlarmDescription: Alert when healthy host count is below minimum
+      MetricName: HealthyHostCount
+      Namespace: AWS/ApplicationELB
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: !Ref MinSize
+      ComparisonOperator: LessThanThreshold
+      Dimensions:
+        - Name: TargetGroup
+          Value: !GetAtt TargetGroup.TargetGroupFullName
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+
+  UnhealthyHostCountAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ProjectName}-unhealthy-host-count
+      AlarmDescription: Alert when there are unhealthy hosts
+      MetricName: UnHealthyHostCount
+      Namespace: AWS/ApplicationELB
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 0
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: TargetGroup
+          Value: !GetAtt TargetGroup.TargetGroupFullName
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+
+  TargetResponseTimeAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub ${ProjectName}-high-response-time
+      AlarmDescription: Alert when response time is high
+      MetricName: TargetResponseTime
+      Namespace: AWS/ApplicationELB
+      Statistic: Average
+      Period: 60
+      EvaluationPeriods: 2
+      Threshold: 1.0
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: LoadBalancer
+          Value: !GetAtt ApplicationLoadBalancer.LoadBalancerFullName
+
+  # CloudWatch Log Groups
+  ApacheAccessLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/ec2/${ProjectName}/httpd/access
+      RetentionInDays: 7
+
+  ApacheErrorLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/ec2/${ProjectName}/httpd/error
+      RetentionInDays: 7
+
+Outputs:
+  LoadBalancerURL:
+    Description: URL of the Application Load Balancer
+    Value: !Sub http://${ApplicationLoadBalancer.DNSName}
+    Export:
+      Name: !Sub ${ProjectName}-alb-url
+
+  LoadBalancerDNS:
+    Description: DNS name of the Application Load Balancer
+    Value: !GetAtt ApplicationLoadBalancer.DNSName
+    Export:
+      Name: !Sub ${ProjectName}-alb-dns
+
+  LoadBalancerArn:
+    Description: ARN of the Application Load Balancer
+    Value: !Ref ApplicationLoadBalancer
+    Export:
+      Name: !Sub ${ProjectName}-alb-arn
+
+  TargetGroupArn:
+    Description: ARN of the Target Group
+    Value: !Ref TargetGroup
+    Export:
+      Name: !Sub ${ProjectName}-target-group-arn
+
+  AutoScalingGroupName:
+    Description: Name of the Auto Scaling Group
+    Value: !Ref AutoScalingGroup
+    Export:
+      Name: !Sub ${ProjectName}-asg-name
+
+  WebServerSecurityGroupId:
+    Description: Security Group ID for web servers
+    Value: !Ref WebServerSecurityGroup
+    Export:
+      Name: !Sub ${ProjectName}-web-sg-id
