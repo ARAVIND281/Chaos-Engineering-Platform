@@ -23,18 +23,18 @@ This platform validates cloud application resilience by orchestrating controlled
 
 ## Project Timeline
 
-### Week 1: Foundation & Target (Current)
+### Week 1: Foundation & Target ✅ COMPLETE
 - [x] Project structure setup
-- [ ] VPC and networking infrastructure
-- [ ] Target application deployment
-- [ ] Manual high availability verification
+- [x] VPC and networking infrastructure
+- [x] Target application deployment
+- [x] Manual high availability verification
 
-### Week 2: Chaos Lambda Functions
-- [ ] Get-Target-Instance function
-- [ ] Inject-Failure function
-- [ ] Validate-System-Health function
+### Week 2: Chaos Lambda Functions ✅ COMPLETE
+- [x] Get-Target-Instance function
+- [x] Inject-Failure function
+- [x] Validate-System-Health function
 
-### Week 3: Orchestration
+### Week 3: Orchestration (Next)
 - [ ] Step Functions state machine
 - [ ] EventBridge scheduling
 
@@ -51,35 +51,28 @@ This platform validates cloud application resilience by orchestrating controlled
 
 ## Quick Start
 
-### 1. Deploy VPC Infrastructure
+### Week 1: Deploy Infrastructure
 
 ```bash
-cd infrastructure
-aws cloudformation create-stack \
-  --stack-name chaos-platform-vpc \
-  --template-body file://vpc-infrastructure.yaml \
-  --capabilities CAPABILITY_IAM
+# Deploy VPC and Target Application
+./scripts/deploy.sh
+
+# Verify high availability
+./scripts/verify-deployment.sh
 ```
 
-### 2. Deploy Target Application
+### Week 2: Deploy Lambda Functions
 
 ```bash
-aws cloudformation create-stack \
-  --stack-name chaos-platform-target-app \
-  --template-body file://target-application.yaml \
-  --parameters file://parameters.json \
-  --capabilities CAPABILITY_IAM
+# Deploy Lambda functions
+./scripts/deploy-lambda-functions.sh
+
+# Test all functions
+./scripts/test-lambda-functions.sh all
 ```
 
-### 3. Verify Deployment
-
-```bash
-# Get the load balancer URL
-aws cloudformation describe-stacks \
-  --stack-name chaos-platform-target-app \
-  --query 'Stacks[0].Outputs[?OutputKey==`LoadBalancerURL`].OutputValue' \
-  --output text
-```
+### Week 3: Coming Soon
+Step Functions orchestration and EventBridge scheduling
 
 ## Directory Structure
 
