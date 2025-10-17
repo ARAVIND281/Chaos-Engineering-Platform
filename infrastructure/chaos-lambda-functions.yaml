@@ -1,0 +1,289 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Chaos Engineering Platform - Lambda Functions (Week 2)'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: chaos-platform
+    Description: Name prefix for all resources
+
+Resources:
+  # ========================================
+  # IAM Roles for Lambda Functions
+  # ========================================
+
+  # Role for Get-Target-Instance Lambda
+  GetTargetInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-get-target-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: GetTargetInstancePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - autoscaling:DescribeAutoScalingGroups
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-get-target-role
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Role for Inject-Failure Lambda
+  InjectFailureRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-inject-failure-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: InjectFailurePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ec2:DescribeInstances
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - ec2:TerminateInstances
+                Resource: 'arn:aws:ec2:*:*:instance/*'
+                Condition:
+                  StringEquals:
+                    'ec2:ResourceTag/ChaosTarget': 'true'
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-inject-failure-role
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Role for Validate-System-Health Lambda
+  ValidateHealthRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-validate-health-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ValidateHealthPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - elasticloadbalancing:DescribeTargetHealth
+                  - elasticloadbalancing:DescribeLoadBalancers
+                  - elasticloadbalancing:DescribeTargetGroups
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - cloudwatch:GetMetricStatistics
+                  - cloudwatch:ListMetrics
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-validate-health-role
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ========================================
+  # Lambda Functions
+  # ========================================
+
+  # Get-Target-Instance Lambda Function
+  GetTargetInstanceFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-get-target-instance
+      Description: Selects a random healthy EC2 instance from Auto Scaling Group for chaos experiments
+      Runtime: python3.9
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt GetTargetInstanceRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Code:
+        ZipFile: |
+          """
+          Get Target Instance Lambda Function
+
+          This is a placeholder. Deploy the actual code using deployment scripts.
+          """
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 500,
+                  'error': 'NotDeployed',
+                  'message': 'Function code not deployed yet. Please deploy using deployment scripts.'
+              }
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-get-target-instance
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Inject-Failure Lambda Function
+  InjectFailureFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-inject-failure
+      Description: Terminates a specified EC2 instance to inject chaos into the system
+      Runtime: python3.9
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt InjectFailureRole.Arn
+      Timeout: 30
+      MemorySize: 128
+      Code:
+        ZipFile: |
+          """
+          Inject Failure Lambda Function
+
+          This is a placeholder. Deploy the actual code using deployment scripts.
+          """
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 500,
+                  'error': 'NotDeployed',
+                  'message': 'Function code not deployed yet. Please deploy using deployment scripts.'
+              }
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-inject-failure
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # Validate-System-Health Lambda Function
+  ValidateHealthFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub ${ProjectName}-validate-system-health
+      Description: Queries CloudWatch metrics to validate system health before and after chaos experiments
+      Runtime: python3.9
+      Handler: lambda_function.lambda_handler
+      Role: !GetAtt ValidateHealthRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      Code:
+        ZipFile: |
+          """
+          Validate System Health Lambda Function
+
+          This is a placeholder. Deploy the actual code using deployment scripts.
+          """
+          def lambda_handler(event, context):
+              return {
+                  'statusCode': 500,
+                  'error': 'NotDeployed',
+                  'message': 'Function code not deployed yet. Please deploy using deployment scripts.'
+              }
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-validate-system-health
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ========================================
+  # CloudWatch Log Groups
+  # ========================================
+
+  GetTargetLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProjectName}-get-target-instance
+      RetentionInDays: 7
+
+  InjectFailureLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProjectName}-inject-failure
+      RetentionInDays: 7
+
+  ValidateHealthLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ProjectName}-validate-system-health
+      RetentionInDays: 7
+
+Outputs:
+  GetTargetInstanceFunctionArn:
+    Description: ARN of Get-Target-Instance Lambda function
+    Value: !GetAtt GetTargetInstanceFunction.Arn
+    Export:
+      Name: !Sub ${ProjectName}-get-target-function-arn
+
+  GetTargetInstanceFunctionName:
+    Description: Name of Get-Target-Instance Lambda function
+    Value: !Ref GetTargetInstanceFunction
+    Export:
+      Name: !Sub ${ProjectName}-get-target-function-name
+
+  InjectFailureFunctionArn:
+    Description: ARN of Inject-Failure Lambda function
+    Value: !GetAtt InjectFailureFunction.Arn
+    Export:
+      Name: !Sub ${ProjectName}-inject-failure-function-arn
+
+  InjectFailureFunctionName:
+    Description: Name of Inject-Failure Lambda function
+    Value: !Ref InjectFailureFunction
+    Export:
+      Name: !Sub ${ProjectName}-inject-failure-function-name
+
+  ValidateHealthFunctionArn:
+    Description: ARN of Validate-System-Health Lambda function
+    Value: !GetAtt ValidateHealthFunction.Arn
+    Export:
+      Name: !Sub ${ProjectName}-validate-health-function-arn
+
+  ValidateHealthFunctionName:
+    Description: Name of Validate-System-Health Lambda function
+    Value: !Ref ValidateHealthFunction
+    Export:
+      Name: !Sub ${ProjectName}-validate-health-function-name
+
+  GetTargetInstanceRoleArn:
+    Description: ARN of Get-Target-Instance IAM Role
+    Value: !GetAtt GetTargetInstanceRole.Arn
+    Export:
+      Name: !Sub ${ProjectName}-get-target-role-arn
+
+  InjectFailureRoleArn:
+    Description: ARN of Inject-Failure IAM Role
+    Value: !GetAtt InjectFailureRole.Arn
+    Export:
+      Name: !Sub ${ProjectName}-inject-failure-role-arn
+
+  ValidateHealthRoleArn:
+    Description: ARN of Validate-System-Health IAM Role
+    Value: !GetAtt ValidateHealthRole.Arn
+    Export:
+      Name: !Sub ${ProjectName}-validate-health-role-arn
