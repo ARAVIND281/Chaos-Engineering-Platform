@@ -1,0 +1,518 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Chaos Engineering Platform - Step Functions Orchestration (Week 3)'
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: chaos-platform
+    Description: Name prefix for all resources
+
+  EnableScheduling:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Enable automated scheduling of chaos experiments
+
+  ScheduleExpression:
+    Type: String
+    Default: 'cron(0 2 * * ? *)'
+    Description: Cron expression for experiment schedule (default: 2 AM daily)
+
+Resources:
+  # ========================================
+  # IAM Role for Step Functions
+  # ========================================
+
+  StepFunctionsExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${ProjectName}-step-functions-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeLambdaFunctions
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - Fn::ImportValue: !Sub ${ProjectName}-get-target-function-arn
+                  - Fn::ImportValue: !Sub ${ProjectName}-inject-failure-function-arn
+                  - Fn::ImportValue: !Sub ${ProjectName}-validate-health-function-arn
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogDelivery
+                  - logs:GetLogDelivery
+                  - logs:UpdateLogDelivery
+                  - logs:DeleteLogDelivery
+                  - logs:ListLogDeliveries
+                  - logs:PutResourcePolicy
+                  - logs:DescribeResourcePolicies
+                  - logs:DescribeLogGroups
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-step-functions-role
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ========================================
+  # CloudWatch Log Group for Step Functions
+  # ========================================
+
+  StepFunctionsLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/vendedlogs/states/${ProjectName}-chaos-experiment
+      RetentionInDays: 14
+
+  # ========================================
+  # Step Functions State Machine
+  # ========================================
+
+  ChaosExperimentStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: !Sub ${ProjectName}-chaos-experiment
+      StateMachineType: STANDARD
+      RoleArn: !GetAtt StepFunctionsExecutionRole.Arn
+      LoggingConfiguration:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt StepFunctionsLogGroup.Arn
+      DefinitionString: !Sub |
+        {
+          "Comment": "Chaos Engineering Experiment Workflow - Validates system resilience by injecting controlled failures",
+          "StartAt": "LogExperimentStart",
+          "States": {
+            "LogExperimentStart": {
+              "Type": "Pass",
+              "Comment": "Log the start of the experiment with timestamp",
+              "Result": {
+                "experimentStartTime": "$.experimentStartTime",
+                "experimentId": "$.experimentId"
+              },
+              "ResultPath": "$.experimentMetadata",
+              "Next": "PreExperimentHealthCheck"
+            },
+            "PreExperimentHealthCheck": {
+              "Type": "Task",
+              "Comment": "Validate system is healthy before injecting chaos",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${GetTargetFunction}",
+                "Payload": {
+                  "targetGroupArn.$": "$.targetGroupArn",
+                  "loadBalancerArn.$": "$.loadBalancerArn",
+                  "expectedHealthyHosts.$": "$.expectedHealthyHosts",
+                  "checkType": "pre"
+                }
+              },
+              "ResultSelector": {
+                "healthStatus.$": "$.Payload.healthStatus",
+                "healthy.$": "$.Payload.healthy",
+                "metrics.$": "$.Payload.metrics",
+                "evaluation.$": "$.Payload.evaluation",
+                "summary.$": "$.Payload.summary",
+                "timestamp.$": "$.Payload.timestamp"
+              },
+              "ResultPath": "$.preExperimentHealth",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "ResultPath": "$.error",
+                  "Next": "ExperimentFailedPreCheck"
+                }
+              ],
+              "Next": "EvaluatePreExperimentHealth"
+            },
+            "EvaluatePreExperimentHealth": {
+              "Type": "Choice",
+              "Comment": "Abort experiment if system is not healthy",
+              "Choices": [
+                {
+                  "Variable": "$.preExperimentHealth.healthy",
+                  "BooleanEquals": true,
+                  "Next": "SelectTargetInstance"
+                }
+              ],
+              "Default": "ExperimentAbortedUnhealthy"
+            },
+            "SelectTargetInstance": {
+              "Type": "Task",
+              "Comment": "Select a random healthy instance from Auto Scaling Group",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${GetTargetFunction}",
+                "Payload": {
+                  "autoScalingGroupName.$": "$.autoScalingGroupName"
+                }
+              },
+              "ResultSelector": {
+                "instanceId.$": "$.Payload.instanceId",
+                "availabilityZone.$": "$.Payload.availabilityZone",
+                "healthStatus.$": "$.Payload.healthStatus",
+                "lifecycleState.$": "$.Payload.lifecycleState",
+                "privateIpAddress.$": "$.Payload.privateIpAddress",
+                "instanceType.$": "$.Payload.instanceType",
+                "totalHealthyInstances.$": "$.Payload.totalHealthyInstances",
+                "message.$": "$.Payload.message"
+              },
+              "ResultPath": "$.selectedTarget",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "ResultPath": "$.error",
+                  "Next": "ExperimentFailedTargetSelection"
+                }
+              ],
+              "Next": "RecordTargetSelection"
+            },
+            "RecordTargetSelection": {
+              "Type": "Pass",
+              "Comment": "Record the selected target for logging",
+              "Parameters": {
+                "instanceId.$": "$.selectedTarget.instanceId",
+                "availabilityZone.$": "$.selectedTarget.availabilityZone",
+                "totalHealthyInstancesBeforeFailure.$": "$.selectedTarget.totalHealthyInstances",
+                "selectionTimestamp.$": "$$.State.EnteredTime"
+              },
+              "ResultPath": "$.targetRecord",
+              "Next": "InjectFailure"
+            },
+            "InjectFailure": {
+              "Type": "Task",
+              "Comment": "Terminate the selected instance to inject chaos",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${InjectFailureFunction}",
+                "Payload": {
+                  "instanceId.$": "$.selectedTarget.instanceId",
+                  "dryRun": false
+                }
+              },
+              "ResultSelector": {
+                "action.$": "$.Payload.action",
+                "instanceId.$": "$.Payload.instanceId",
+                "previousState.$": "$.Payload.previousState",
+                "currentState.$": "$.Payload.currentState",
+                "message.$": "$.Payload.message",
+                "timestamp.$": "$.Payload.timestamp"
+              },
+              "ResultPath": "$.failureInjection",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 2,
+                  "BackoffRate": 2
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "ResultPath": "$.error",
+                  "Next": "ExperimentFailedInjection"
+                }
+              ],
+              "Next": "WaitForRecovery"
+            },
+            "WaitForRecovery": {
+              "Type": "Wait",
+              "Comment": "Wait for Auto Scaling to detect failure and launch replacement instance",
+              "Seconds": 180,
+              "Next": "PostExperimentHealthCheck"
+            },
+            "PostExperimentHealthCheck": {
+              "Type": "Task",
+              "Comment": "Validate system recovered after chaos injection",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": {
+                "FunctionName": "${ValidateHealthFunction}",
+                "Payload": {
+                  "targetGroupArn.$": "$.targetGroupArn",
+                  "loadBalancerArn.$": "$.loadBalancerArn",
+                  "expectedHealthyHosts.$": "$.expectedHealthyHosts",
+                  "checkType": "post"
+                }
+              },
+              "ResultSelector": {
+                "healthStatus.$": "$.Payload.healthStatus",
+                "healthy.$": "$.Payload.healthy",
+                "metrics.$": "$.Payload.metrics",
+                "evaluation.$": "$.Payload.evaluation",
+                "summary.$": "$.Payload.summary",
+                "timestamp.$": "$.Payload.timestamp"
+              },
+              "ResultPath": "$.postExperimentHealth",
+              "Retry": [
+                {
+                  "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                  "IntervalSeconds": 2,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Catch": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "ResultPath": "$.error",
+                  "Next": "ExperimentFailedPostCheck"
+                }
+              ],
+              "Next": "EvaluatePostExperimentHealth"
+            },
+            "EvaluatePostExperimentHealth": {
+              "Type": "Choice",
+              "Comment": "Determine if system successfully recovered",
+              "Choices": [
+                {
+                  "Variable": "$.postExperimentHealth.healthy",
+                  "BooleanEquals": true,
+                  "Next": "ExperimentSucceeded"
+                }
+              ],
+              "Default": "SystemDidNotRecover"
+            },
+            "ExperimentSucceeded": {
+              "Type": "Pass",
+              "Comment": "Chaos experiment completed successfully - system is resilient",
+              "Parameters": {
+                "status": "SUCCESS",
+                "message": "Chaos experiment completed successfully. System demonstrated resilience.",
+                "experimentId.$": "$.experimentMetadata.experimentId",
+                "experimentStartTime.$": "$.experimentMetadata.experimentStartTime",
+                "experimentEndTime.$": "$$.State.EnteredTime",
+                "targetInstance": {
+                  "instanceId.$": "$.selectedTarget.instanceId",
+                  "availabilityZone.$": "$.selectedTarget.availabilityZone"
+                },
+                "healthChecks": {
+                  "preExperiment": {
+                    "status.$": "$.preExperimentHealth.healthStatus",
+                    "summary.$": "$.preExperimentHealth.summary"
+                  },
+                  "postExperiment": {
+                    "status.$": "$.postExperimentHealth.healthStatus",
+                    "summary.$": "$.postExperimentHealth.summary"
+                  }
+                },
+                "conclusion": "System successfully withstood infrastructure failure and auto-recovered"
+              },
+              "End": true
+            },
+            "SystemDidNotRecover": {
+              "Type": "Pass",
+              "Comment": "System failed to recover within acceptable timeframe",
+              "Parameters": {
+                "status": "FAILED",
+                "reason": "SystemRecoveryFailure",
+                "message": "System did not return to healthy state after chaos injection",
+                "experimentId.$": "$.experimentMetadata.experimentId",
+                "targetInstance": {
+                  "instanceId.$": "$.selectedTarget.instanceId"
+                },
+                "recommendation": "Review Auto Scaling configuration and instance health checks"
+              },
+              "End": true
+            },
+            "ExperimentAbortedUnhealthy": {
+              "Type": "Pass",
+              "Comment": "Experiment aborted - system was not healthy before starting",
+              "Parameters": {
+                "status": "ABORTED",
+                "reason": "PreExperimentUnhealthy",
+                "message": "Chaos experiment aborted. System was not healthy before injection.",
+                "preExperimentHealth": {
+                  "status.$": "$.preExperimentHealth.healthStatus",
+                  "summary.$": "$.preExperimentHealth.summary"
+                }
+              },
+              "End": true
+            },
+            "ExperimentFailedPreCheck": {
+              "Type": "Pass",
+              "Comment": "Experiment failed during pre-experiment health check",
+              "Parameters": {
+                "status": "FAILED",
+                "reason": "PreCheckError",
+                "message": "Failed to execute pre-experiment health check",
+                "error.$": "$.error"
+              },
+              "End": true
+            },
+            "ExperimentFailedTargetSelection": {
+              "Type": "Pass",
+              "Comment": "Experiment failed during target instance selection",
+              "Parameters": {
+                "status": "FAILED",
+                "reason": "TargetSelectionError",
+                "message": "Failed to select target instance",
+                "error.$": "$.error"
+              },
+              "End": true
+            },
+            "ExperimentFailedInjection": {
+              "Type": "Pass",
+              "Comment": "Experiment failed during chaos injection",
+              "Parameters": {
+                "status": "FAILED",
+                "reason": "InjectionError",
+                "message": "Failed to inject failure",
+                "error.$": "$.error"
+              },
+              "End": true
+            },
+            "ExperimentFailedPostCheck": {
+              "Type": "Pass",
+              "Comment": "Experiment failed during post-experiment health check",
+              "Parameters": {
+                "status": "FAILED",
+                "reason": "PostCheckError",
+                "message": "Failed to execute post-experiment health check",
+                "error.$": "$.error"
+              },
+              "End": true
+            }
+          }
+        }
+      DefinitionSubstitutions:
+        GetTargetFunction:
+          Fn::ImportValue: !Sub ${ProjectName}-get-target-function-name
+        InjectFailureFunction:
+          Fn::ImportValue: !Sub ${ProjectName}-inject-failure-function-name
+        ValidateHealthFunction:
+          Fn::ImportValue: !Sub ${ProjectName}-validate-health-function-name
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-chaos-experiment
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ========================================
+  # EventBridge Role for triggering Step Functions
+  # ========================================
+
+  EventBridgeExecutionRole:
+    Type: AWS::IAM::Role
+    Condition: EnableSchedulingCondition
+    Properties:
+      RoleName: !Sub ${ProjectName}-eventbridge-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: StartStepFunctionsExecution
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - states:StartExecution
+                Resource: !GetAtt ChaosExperimentStateMachine.Arn
+      Tags:
+        - Key: Name
+          Value: !Sub ${ProjectName}-eventbridge-role
+        - Key: Project
+          Value: !Ref ProjectName
+
+  # ========================================
+  # EventBridge Scheduled Rule
+  # ========================================
+
+  ChaosExperimentScheduleRule:
+    Type: AWS::Events::Rule
+    Condition: EnableSchedulingCondition
+    Properties:
+      Name: !Sub ${ProjectName}-chaos-schedule
+      Description: Scheduled trigger for chaos engineering experiments
+      ScheduleExpression: !Ref ScheduleExpression
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt ChaosExperimentStateMachine.Arn
+          RoleArn: !GetAtt EventBridgeExecutionRole.Arn
+          Id: ChaosExperimentTarget
+          Input: !Sub |
+            {
+              "experimentId": "scheduled-experiment",
+              "experimentStartTime": "$$.Execution.StartTime",
+              "autoScalingGroupName": "${AWS::StackName}",
+              "targetGroupArn": "REPLACE_WITH_TARGET_GROUP_ARN",
+              "loadBalancerArn": "REPLACE_WITH_LOAD_BALANCER_ARN",
+              "expectedHealthyHosts": 2
+            }
+
+Conditions:
+  EnableSchedulingCondition: !Equals [!Ref EnableScheduling, 'true']
+
+Outputs:
+  StateMachineArn:
+    Description: ARN of the Chaos Experiment Step Functions State Machine
+    Value: !GetAtt ChaosExperimentStateMachine.Arn
+    Export:
+      Name: !Sub ${ProjectName}-state-machine-arn
+
+  StateMachineName:
+    Description: Name of the Chaos Experiment Step Functions State Machine
+    Value: !GetAtt ChaosExperimentStateMachine.Name
+    Export:
+      Name: !Sub ${ProjectName}-state-machine-name
+
+  StepFunctionsRoleArn:
+    Description: ARN of the Step Functions execution role
+    Value: !GetAtt StepFunctionsExecutionRole.Arn
+    Export:
+      Name: !Sub ${ProjectName}-step-functions-role-arn
+
+  LogGroupName:
+    Description: CloudWatch Log Group for Step Functions executions
+    Value: !Ref StepFunctionsLogGroup
+    Export:
+      Name: !Sub ${ProjectName}-step-functions-log-group
+
+  ScheduleRuleArn:
+    Condition: EnableSchedulingCondition
+    Description: ARN of the EventBridge schedule rule
+    Value: !GetAtt ChaosExperimentScheduleRule.Arn
+    Export:
+      Name: !Sub ${ProjectName}-schedule-rule-arn
+
+  ScheduleExpression:
+    Condition: EnableSchedulingCondition
+    Description: Cron expression for automated chaos experiments
+    Value: !Ref ScheduleExpression

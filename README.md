@@ -34,11 +34,11 @@ This platform validates cloud application resilience by orchestrating controlled
 - [x] Inject-Failure function
 - [x] Validate-System-Health function
 
-### Week 3: Orchestration (Next)
-- [ ] Step Functions state machine
-- [ ] EventBridge scheduling
+### Week 3: Orchestration ✅ COMPLETE
+- [x] Step Functions state machine
+- [x] EventBridge scheduling
 
-### Week 4: Testing & Documentation
+### Week 4: Testing & Documentation (Next)
 - [ ] End-to-end testing
 - [ ] Final documentation
 
@@ -71,8 +71,21 @@ This platform validates cloud application resilience by orchestrating controlled
 ./scripts/test-lambda-functions.sh all
 ```
 
-### Week 3: Coming Soon
-Step Functions orchestration and EventBridge scheduling
+### Week 3: Deploy Step Functions
+
+```bash
+# Deploy Step Functions (manual mode)
+./scripts/deploy-step-functions.sh
+
+# Run chaos experiment manually
+./scripts/run-chaos-experiment.sh
+
+# Deploy with automated scheduling (optional)
+./scripts/deploy-step-functions.sh true
+```
+
+### Week 4: Coming Soon
+End-to-end testing and final documentation
 
 ## Directory Structure
 
