@@ -47,8 +47,48 @@ if ! aws sts get-caller-identity &> /dev/null; then
     exit 1
 fi
 
-# Step 1: Delete Target Application Stack
-echo -e "${YELLOW}Step 1: Deleting Target Application...${NC}"
+# Step 1: Delete Step Functions Stack
+echo -e "${YELLOW}Step 1: Deleting Step Functions...${NC}"
+STEP_STACK_NAME="${PROJECT_NAME}-step-functions"
+
+if aws cloudformation describe-stacks --stack-name $STEP_STACK_NAME --region $REGION &> /dev/null; then
+    echo -e "${YELLOW}Deleting stack: $STEP_STACK_NAME${NC}"
+    aws cloudformation delete-stack \
+        --stack-name $STEP_STACK_NAME \
+        --region $REGION
+
+    echo -e "${YELLOW}Waiting for Step Functions deletion...${NC}"
+    aws cloudformation wait stack-delete-complete \
+        --stack-name $STEP_STACK_NAME \
+        --region $REGION 2>/dev/null || true
+
+    echo -e "${GREEN}✓ Step Functions deleted${NC}\n"
+else
+    echo -e "${YELLOW}Stack $STEP_STACK_NAME not found, skipping...${NC}\n"
+fi
+
+# Step 2: Delete Lambda Functions Stack
+echo -e "${YELLOW}Step 2: Deleting Lambda Functions...${NC}"
+LAMBDA_STACK_NAME="${PROJECT_NAME}-lambda-functions"
+
+if aws cloudformation describe-stacks --stack-name $LAMBDA_STACK_NAME --region $REGION &> /dev/null; then
+    echo -e "${YELLOW}Deleting stack: $LAMBDA_STACK_NAME${NC}"
+    aws cloudformation delete-stack \
+        --stack-name $LAMBDA_STACK_NAME \
+        --region $REGION
+
+    echo -e "${YELLOW}Waiting for Lambda Functions deletion...${NC}"
+    aws cloudformation wait stack-delete-complete \
+        --stack-name $LAMBDA_STACK_NAME \
+        --region $REGION 2>/dev/null || true
+
+    echo -e "${GREEN}✓ Lambda Functions deleted${NC}\n"
+else
+    echo -e "${YELLOW}Stack $LAMBDA_STACK_NAME not found, skipping...${NC}\n"
+fi
+
+# Step 3: Delete Target Application Stack
+echo -e "${YELLOW}Step 3: Deleting Target Application...${NC}"
 APP_STACK_NAME="${PROJECT_NAME}-target-app"
 
 if aws cloudformation describe-stacks --stack-name $APP_STACK_NAME --region $REGION &> /dev/null; then
@@ -67,8 +107,8 @@ else
     echo -e "${YELLOW}Stack $APP_STACK_NAME not found, skipping...${NC}\n"
 fi
 
-# Step 2: Delete VPC Stack
-echo -e "${YELLOW}Step 2: Deleting VPC Infrastructure...${NC}"
+# Step 4: Delete VPC Stack
+echo -e "${YELLOW}Step 4: Deleting VPC Infrastructure...${NC}"
 VPC_STACK_NAME="${PROJECT_NAME}-vpc"
 
 if aws cloudformation describe-stacks --stack-name $VPC_STACK_NAME --region $REGION &> /dev/null; then
@@ -87,13 +127,17 @@ else
     echo -e "${YELLOW}Stack $VPC_STACK_NAME not found, skipping...${NC}\n"
 fi
 
-# Step 3: Clean up CloudWatch Logs
-echo -e "${YELLOW}Step 3: Cleaning up CloudWatch Logs...${NC}"
+# Step 5: Clean up CloudWatch Logs
+echo -e "${YELLOW}Step 5: Cleaning up CloudWatch Logs...${NC}"
 
 LOG_GROUPS=(
     "/aws/vpc/${PROJECT_NAME}"
     "/aws/ec2/${PROJECT_NAME}/httpd/access"
     "/aws/ec2/${PROJECT_NAME}/httpd/error"
+    "/aws/lambda/${PROJECT_NAME}-get-target-instance"
+    "/aws/lambda/${PROJECT_NAME}-inject-failure"
+    "/aws/lambda/${PROJECT_NAME}-validate-system-health"
+    "/aws/vendedlogs/states/${PROJECT_NAME}-chaos-experiment"
 )
 
 for LOG_GROUP in "${LOG_GROUPS[@]}"; do
