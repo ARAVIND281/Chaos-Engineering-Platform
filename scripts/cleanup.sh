@@ -1,6 +1,8 @@
 #!/bin/bash
 
+
 # Cleanup script for Chaos Engineering Platform
+
 
 # Removes all AWS resources to avoid charges
 

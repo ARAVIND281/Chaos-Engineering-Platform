@@ -9,7 +9,7 @@ set -e
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
-NC='\033[0m' # No Color
+NC='\033[0m' # No Color 
 
 PROJECT_NAME="chaos-platform"
 REGION="${AWS_REGION:-us-east-1}"
@@ -19,6 +19,7 @@ echo -e "${GREEN}================================${NC}"
 echo -e "${GREEN}Chaos Step Functions${NC}"
 echo -e "${GREEN}Deployment Script - Week 3${NC}"
 echo -e "${GREEN}================================${NC}\n"
+
 
 # Check AWS CLI
 if ! command -v aws &> /dev/null; then
