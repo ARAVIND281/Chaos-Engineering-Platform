@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'DynamoDB Tables for Chaos Engineering Platform'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+    Description: Environment name
+
+Resources:
+  # Experiments Table
+  ExperimentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'chaos-experiments-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: experimentId
+          AttributeType: S
+        - AttributeName: createdBy
+          AttributeType: S
+        - AttributeName: startTime
+          AttributeType: S
+      KeySchema:
+        - AttributeName: experimentId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: CreatedByIndex
+          KeySchema:
+            - AttributeName: createdBy
+              KeyType: HASH
+            - AttributeName: startTime
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Application
+          Value: ChaosEngineering
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Results Table
+  ResultsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'chaos-results-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: resultId
+          AttributeType: S
+        - AttributeName: experimentId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: resultId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: ExperimentIdIndex
+          KeySchema:
+            - AttributeName: experimentId
+              KeyType: HASH
+            - AttributeName: timestamp
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Application
+          Value: ChaosEngineering
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Users Table
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'chaos-users-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: EmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Application
+          Value: ChaosEngineering
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  ExperimentsTableName:
+    Description: Name of the Experiments DynamoDB table
+    Value: !Ref ExperimentsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-ExperimentsTable'
+
+  ExperimentsTableArn:
+    Description: ARN of the Experiments DynamoDB table
+    Value: !GetAtt ExperimentsTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ExperimentsTableArn'
+
+  ResultsTableName:
+    Description: Name of the Results DynamoDB table
+    Value: !Ref ResultsTable
+    Export:
+      Name: !Sub '${AWS::StackName}-ResultsTable'
+
+  ResultsTableArn:
+    Description: ARN of the Results DynamoDB table
+    Value: !GetAtt ResultsTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-ResultsTableArn'
+
+  UsersTableName:
+    Description: Name of the Users DynamoDB table
+    Value: !Ref UsersTable
+    Export:
+      Name: !Sub '${AWS::StackName}-UsersTable'
+
+  UsersTableArn:
+    Description: ARN of the Users DynamoDB table
+    Value: !GetAtt UsersTable.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-UsersTableArn'

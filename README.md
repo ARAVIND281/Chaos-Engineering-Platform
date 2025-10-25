@@ -1,10 +1,20 @@
-# Cloud-Native Chaos Engineering Platform
+# Cloud-Native Chaos Engineering Platform - Full-Stack Application
 
-An automated Chaos Engineering platform on AWS that proactively tests fault tolerance by injecting infrastructure-level failures.
+A **complete full-stack** automated Chaos Engineering platform on AWS with modern React dashboard and REST API backend that proactively tests fault tolerance by injecting infrastructure-level failures.
 
 ## Project Overview
 
-This platform validates cloud application resilience by orchestrating controlled chaos experiments using AWS Step Functions and Lambda, ensuring auto-scaling and failover mechanisms work as designed.
+This platform validates cloud application resilience through a professional web interface backed by serverless AWS infrastructure. It orchestrates controlled chaos experiments using AWS Step Functions and Lambda, ensuring auto-scaling and failover mechanisms work as designed.
+
+### Key Features
+- ⚛️ **Modern React Frontend** - Beautiful, responsive dashboard for managing chaos experiments
+- 🔌 **RESTful API Backend** - Node.js/TypeScript API on AWS Lambda
+- 📊 **Real-time Monitoring** - Live experiment progress tracking
+- 📈 **Analytics Dashboard** - Success rates, recovery times, and trends
+- 🔐 **Authentication** - JWT-based user authentication
+- 💾 **DynamoDB Storage** - Scalable NoSQL database for experiments and results
+- 🎯 **Step Functions Integration** - Automated chaos experiment orchestration
+- 📱 **Responsive Design** - Works on mobile, tablet, and desktop
 
 ## Architecture
 
@@ -26,7 +36,7 @@ This platform validates cloud application resilience by orchestrating controlled
 ### Week 1: Foundation & Target ✅ COMPLETE
 - [x] Project structure setup
 - [x] VPC and networking infrastructure
-- [x] Target application deployment
+- [x] Target application deployment (EC2 Auto Scaling + ALB)
 - [x] Manual high availability verification
 
 ### Week 2: Chaos Lambda Functions ✅ COMPLETE
@@ -35,12 +45,23 @@ This platform validates cloud application resilience by orchestrating controlled
 - [x] Validate-System-Health function
 
 ### Week 3: Orchestration ✅ COMPLETE
-- [x] Step Functions state machine
+- [x] Step Functions state machine (18 states)
 - [x] EventBridge scheduling
+- [x] Deployment and execution scripts
 
-### Week 4: Testing & Documentation (Next)
-- [ ] End-to-end testing
-- [ ] Final documentation
+### Week 4: Testing & Documentation ✅ COMPLETE
+- [x] End-to-end testing (14 automated tests)
+- [x] Final project report (800+ lines)
+- [x] Presentation guide with demo
+
+### Week 5-8: Full-Stack Application ✅ COMPLETE
+- [x] **Frontend**: React + TypeScript dashboard with Lovable.dev
+- [x] **Backend**: Node.js/TypeScript REST API on Lambda
+- [x] **Database**: DynamoDB tables (Experiments, Results, Users)
+- [x] **API Gateway**: RESTful endpoints for all operations
+- [x] **Integration**: Frontend ↔ Backend ↔ Step Functions
+- [x] **Deployment**: Automated scripts for full-stack deployment
+- [x] **Documentation**: Complete guides and API documentation
 
 ## Prerequisites
 
