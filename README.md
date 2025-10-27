@@ -576,7 +576,7 @@ MIT License - you can use, modify, and distribute this code freely.
 
 **If this project helped you, please give it a ⭐!**
 
-[⬆ Back to Top](#chaos-engineering-platform)
+[⬆ Back to Top](#-chaos-engineering-platform)
 
 ---
 
