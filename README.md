@@ -62,7 +62,7 @@ Chaos Engineering is the discipline of experimenting on a system to build confid
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/chaos-engineering-platform.git
+git clone https://github.com/ARAVIND281/Chaos-Engineering-Platform.git
 cd chaos-engineering-platform
 
 # Deploy everything
@@ -206,7 +206,7 @@ MIT License - see [LICENSE](LICENSE) file.
 ## Support
 
 - **Documentation**: [Full Documentation](docs/)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/chaos-engineering-platform/issues)
+- **Issues**: [GitHub Issues](https://github.com/ARAVIND281/Chaos-Engineering-Platform/issues)
 
 ---
 

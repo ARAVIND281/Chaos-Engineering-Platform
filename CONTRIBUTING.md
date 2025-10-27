@@ -42,7 +42,7 @@ This project follows a Code of Conduct. By participating, you are expected to up
 
 ### Finding Issues
 
-- Check [GitHub Issues](https://github.com/yourusername/chaos-engineering-platform/issues)
+- Check [GitHub Issues](https://github.com/ARAVIND281/Chaos-Engineering-Platform/issues)
 - Look for `good first issue` label for beginner-friendly tasks
 - Check `help wanted` label for high-priority items
 
@@ -55,7 +55,7 @@ This project follows a Code of Conduct. By participating, you are expected to up
 ```bash
 # Fork the repository on GitHub
 # Then clone your fork
-git clone https://github.com/YOUR_USERNAME/chaos-engineering-platform.git
+git clone https://github.com/ARAVIND281/chaos-engineering-platform.git
 cd chaos-engineering-platform
 ```
 
