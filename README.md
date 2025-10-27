@@ -1,171 +1,217 @@
-# Cloud-Native Chaos Engineering Platform - Full-Stack Application
+# Chaos Engineering Platform
 
-A **complete full-stack** automated Chaos Engineering platform on AWS with modern React dashboard and REST API backend that proactively tests fault tolerance by injecting infrastructure-level failures.
+<div align="center">
 
-## Project Overview
+![Chaos Engineering](https://img.shields.io/badge/Chaos-Engineering-red?style=for-the-badge)
+![AWS](https://img.shields.io/badge/AWS-Cloud-orange?style=for-the-badge&logo=amazon-aws)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 
-This platform validates cloud application resilience through a professional web interface backed by serverless AWS infrastructure. It orchestrates controlled chaos experiments using AWS Step Functions and Lambda, ensuring auto-scaling and failover mechanisms work as designed.
+**A production-ready, full-stack Chaos Engineering platform built on AWS**
 
-### Key Features
-- ⚛️ **Modern React Frontend** - Beautiful, responsive dashboard for managing chaos experiments
-- 🔌 **RESTful API Backend** - Node.js/TypeScript API on AWS Lambda
-- 📊 **Real-time Monitoring** - Live experiment progress tracking
-- 📈 **Analytics Dashboard** - Success rates, recovery times, and trends
-- 🔐 **Authentication** - JWT-based user authentication
-- 💾 **DynamoDB Storage** - Scalable NoSQL database for experiments and results
-- 🎯 **Step Functions Integration** - Automated chaos experiment orchestration
-- 📱 **Responsive Design** - Works on mobile, tablet, and desktop
+Test your system's resilience by injecting controlled failures into your infrastructure.
 
-## Architecture
+[Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Architecture](#-architecture)
 
-### Target Application
-- **VPC**: Custom VPC across 2 Availability Zones
-- **Compute**: Auto Scaling Group (2-4 EC2 instances)
-- **Load Balancer**: Application Load Balancer
-- **Database**: RDS Multi-AZ (optional)
+</div>
 
-### Chaos Platform
-- **Scheduler**: Amazon EventBridge
-- **Orchestrator**: AWS Step Functions
-- **Execution**: AWS Lambda functions
-- **Monitoring**: Amazon CloudWatch
-- **Security**: AWS IAM with least privilege
+---
 
-## Project Timeline
+## Overview
 
-### Week 1: Foundation & Target ✅ COMPLETE
-- [x] Project structure setup
-- [x] VPC and networking infrastructure
-- [x] Target application deployment (EC2 Auto Scaling + ALB)
-- [x] Manual high availability verification
+This Chaos Engineering Platform enables you to test the resilience of your AWS infrastructure by injecting controlled failures and monitoring system behavior. Built entirely on AWS serverless technologies, it provides a complete solution for chaos experimentation with a modern React frontend, TypeScript backend, and automated workflows.
 
-### Week 2: Chaos Lambda Functions ✅ COMPLETE
-- [x] Get-Target-Instance function
-- [x] Inject-Failure function
-- [x] Validate-System-Health function
+### What is Chaos Engineering?
 
-### Week 3: Orchestration ✅ COMPLETE
-- [x] Step Functions state machine (18 states)
-- [x] EventBridge scheduling
-- [x] Deployment and execution scripts
+Chaos Engineering is the discipline of experimenting on a system to build confidence in the system's capability to withstand turbulent conditions in production.
 
-### Week 4: Testing & Documentation ✅ COMPLETE
-- [x] End-to-end testing (14 automated tests)
-- [x] Final project report (800+ lines)
-- [x] Presentation guide with demo
+---
 
-### Week 5-8: Full-Stack Application ✅ COMPLETE
-- [x] **Frontend**: React + TypeScript dashboard with Lovable.dev
-- [x] **Backend**: Node.js/TypeScript REST API on Lambda
-- [x] **Database**: DynamoDB tables (Experiments, Results, Users)
-- [x] **API Gateway**: RESTful endpoints for all operations
-- [x] **Integration**: Frontend ↔ Backend ↔ Step Functions
-- [x] **Deployment**: Automated scripts for full-stack deployment
-- [x] **Documentation**: Complete guides and API documentation
+## Features
 
-## Prerequisites
+### Core Capabilities
 
-- AWS Account with appropriate permissions
-- AWS CLI configured
-- Python 3.9+ or Node.js 18+
-- Git
+- **Automated Chaos Experiments** - Inject failures into EC2 instances, Auto Scaling Groups
+- **Step Functions Orchestration** - 18-state workflow for safe, controlled chaos injection
+- **Real-time Monitoring** - Track system health before, during, and after experiments
+- **Dry Run Mode** - Test experiments without actual impact
+- **Full-Stack Dashboard** - Modern React UI for managing experiments
+- **Results Analytics** - Comprehensive experiment results and metrics
+
+### Infrastructure
+
+- **Multi-AZ VPC** - High-availability networking with public/private subnets
+- **Auto Scaling Target App** - Sample application to test chaos experiments against
+- **Serverless Backend** - Lambda functions with DynamoDB for data persistence
+- **CloudWatch Integration** - Detailed logging and metrics
+- **Infrastructure as Code** - Complete CloudFormation templates
+
+---
 
 ## Quick Start
 
-### Week 1: Deploy Infrastructure
+### Prerequisites
+
+- AWS Account with appropriate permissions
+- AWS CLI configured
+- Node.js 18+ and npm
+- Git
+
+### One-Command Deployment
 
 ```bash
-# Deploy VPC and Target Application
-./scripts/deploy.sh
+# Clone the repository
+git clone https://github.com/yourusername/chaos-engineering-platform.git
+cd chaos-engineering-platform
 
-# Verify high availability
-./scripts/verify-deployment.sh
+# Deploy everything
+./scripts/deploy-fullstack-complete.sh dev
 ```
 
-### Week 2: Deploy Lambda Functions
+**Deployment time:** ~15-20 minutes
 
-```bash
-# Deploy Lambda functions
-./scripts/deploy-lambda-functions.sh
+### Access Your Platform
 
-# Test all functions
-./scripts/test-lambda-functions.sh all
-```
-
-### Week 3: Deploy Step Functions
-
-```bash
-# Deploy Step Functions (manual mode)
-./scripts/deploy-step-functions.sh
-
-# Run chaos experiment manually
-./scripts/run-chaos-experiment.sh
-
-# Deploy with automated scheduling (optional)
-./scripts/deploy-step-functions.sh true
-```
-
-### Week 4: Coming Soon
-End-to-end testing and final documentation
-
-## Directory Structure
+After deployment:
 
 ```
-.
-├── README.md
-├── docs/
-│   └── design-document.md
-├── infrastructure/
-│   ├── vpc-infrastructure.yaml
-│   ├── target-application.yaml
-│   ├── parameters.json
-│   └── chaos-platform.yaml (Week 3)
-├── lambda-functions/
-│   ├── get-target-instance/
-│   ├── inject-failure/
-│   └── validate-system-health/
-├── step-functions/
-│   └── chaos-experiment-workflow.json
-└── scripts/
-    ├── deploy.sh
-    └── cleanup.sh
+Frontend URL: http://chaos-platform-frontend-dev-[account-id].s3-website-us-east-1.amazonaws.com
+Login: admin@chaos-platform.com / any-password
 ```
 
-## Security Considerations
+---
 
-- All Lambda functions follow principle of least privilege
-- EC2 instances are tagged for chaos experiment targeting
-- Security groups restrict traffic to minimum required
-- CloudWatch logging enabled for all components
+## Architecture
+
+```
+User Interface (React Dashboard)
+         |
+Backend API (Lambda + DynamoDB)
+         |
+Chaos Orchestration (Step Functions)
+         |
+Target Infrastructure (VPC + EC2 + ALB)
+```
+
+### Component Breakdown
+
+#### Week 1: Foundation
+- VPC Infrastructure (Multi-AZ)
+- Target Application (Auto Scaling Group + Load Balancer)
+
+#### Week 2: Chaos Functions
+- get-target-instance
+- inject-failure
+- validate-system-health
+
+#### Week 3: Orchestration
+- Step Functions State Machine (18 states)
+
+#### Weeks 5-8: Full-Stack Application
+- Backend API (TypeScript Lambda)
+- Frontend Dashboard (React + shadcn/ui)
+- Database (DynamoDB)
+
+---
+
+## Documentation
+
+### Quick References
+
+- [Quick Start Guide](docs/deployment/DEPLOY_NOW.md)
+- [Step-by-Step Deployment](docs/deployment/STEP_BY_STEP_GUIDE.md)
+- [AWS IAM Setup](docs/deployment/AWS_IAM_SETUP.md)
+
+### Weekly Guides
+
+- [Week 1: VPC & Target Application](docs/weeks/week1.md)
+- [Week 2: Lambda Functions](docs/weeks/week2.md)
+- [Week 3: Step Functions](docs/weeks/week3.md)
+- [Week 4: Monitoring](docs/weeks/week4.md)
+
+### Full-Stack Documentation
+
+- [Full-Stack Design](docs/fullstack/FULL_STACK_DESIGN.md)
+- [Full-Stack Summary](docs/fullstack/FULL_STACK_SUMMARY.md)
+- [Quick Start](docs/fullstack/FULLSTACK_QUICKSTART.md)
+
+---
+
+## Project Structure
+
+```
+chaos-engineering-platform/
+├── infrastructure/              # CloudFormation templates
+├── lambda-functions/            # Chaos Lambda functions
+├── backend/                     # Backend API (TypeScript)
+├── frontend/                    # React Dashboard
+├── scripts/                     # Deployment & utility scripts
+└── docs/                        # Documentation
+```
+
+---
+
+## Usage
+
+### Creating Your First Experiment
+
+1. Access the dashboard
+2. Login with provided credentials
+3. Click "New Experiment"
+4. Select target and failure type
+5. Enable "Dry Run" for safe testing
+6. Click "Start Experiment"
+7. Monitor progress in real-time
+8. View results and analytics
+
+---
 
 ## Cost Estimation
 
-- VPC: Free
-- EC2 (t3.micro): ~$12/month for 2 instances
-- ALB: ~$22/month
-- Lambda: <$1/month (free tier)
-- CloudWatch: <$5/month
+### Monthly Costs (if left running 24/7)
 
-**Estimated Total**: ~$40/month
+| Service | Cost |
+|---------|------|
+| EC2 Instances (2x t3.micro) | ~$12/month |
+| Application Load Balancer | ~$16/month |
+| NAT Gateways (2) | ~$64/month |
+| Lambda + DynamoDB + S3 | ~$13/month |
+| **Total** | **~$105/month** |
 
-## Monitoring
-
-Access CloudWatch dashboards:
-```bash
-aws cloudwatch get-dashboard --dashboard-name ChaosEngineeringPlatform
-```
+---
 
 ## Cleanup
 
-To avoid ongoing charges:
+To avoid AWS charges:
+
 ```bash
 ./scripts/cleanup.sh
 ```
 
-## Team
+---
 
-- **Aravind S** - Project Lead
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
 
 ## License
 
-This project is for educational purposes as part of a Cloud Engineering curriculum.
+MIT License - see [LICENSE](LICENSE) file.
+
+---
+
+## Support
+
+- **Documentation**: [Full Documentation](docs/)
+- **Issues**: [GitHub Issues](https://github.com/yourusername/chaos-engineering-platform/issues)
+
+---
+
+<div align="center">
+
+**Built with ❤️ for the DevOps and SRE community**
+
+</div>
