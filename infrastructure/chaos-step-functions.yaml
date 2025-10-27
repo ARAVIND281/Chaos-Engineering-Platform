@@ -18,7 +18,7 @@ Parameters:
   ScheduleExpression:
     Type: String
     Default: 'cron(0 2 * * ? *)'
-    Description: Cron expression for experiment schedule (default: 2 AM daily)
+    Description: 'Cron expression for experiment schedule (default: 2 AM daily)'
 
 Resources:
   # ========================================
