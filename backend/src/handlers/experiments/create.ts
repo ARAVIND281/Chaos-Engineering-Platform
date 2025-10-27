@@ -27,7 +27,6 @@ export const handler = async (
     // Get user from JWT claims (populated by authorizer)
     const userEmail =
       event.requestContext.authorizer?.claims?.email || 'system@chaos-platform.com';
-    const userId = event.requestContext.authorizer?.claims?.sub || 'system';
 
     // Generate experiment ID
     const experimentId = `exp-${new Date().toISOString().split('T')[0]}-${uuidv4().substring(0, 8)}`;
