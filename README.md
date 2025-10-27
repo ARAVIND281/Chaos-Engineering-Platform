@@ -15,7 +15,7 @@
 
 Test your system's resilience by injecting controlled failures into your infrastructure.
 
-[🚀 Quick Start](#-quick-start) • [📖 Documentation](#-documentation) • [🏗️ Architecture](#️-architecture) • [💡 Examples](#-examples) • [🤝 Contributing](#-contributing)
+[🚀 Quick Start](#quick-start) • [📖 Documentation](#documentation) • [🏗️ Architecture](#️architecture) • [💡 Examples](#examples) • [🤝 Contributing](#contributing)
 
 ---
 
@@ -566,7 +566,6 @@ MIT License - you can use, modify, and distribute this code freely.
 
 - **Repository**: [github.com/ARAVIND281/Chaos-Engineering-Platform](https://github.com/ARAVIND281/Chaos-Engineering-Platform)
 - **Issues**: [Report a bug or request a feature](https://github.com/ARAVIND281/Chaos-Engineering-Platform/issues)
-- **Discussions**: [Join the conversation](https://github.com/ARAVIND281/Chaos-Engineering-Platform/discussions)
 - **Documentation**: [Full documentation](docs/)
 
 ---
@@ -577,7 +576,7 @@ MIT License - you can use, modify, and distribute this code freely.
 
 **If this project helped you, please give it a ⭐!**
 
-[⬆ Back to Top](#-chaos-engineering-platform)
+[⬆ Back to Top](#chaos-engineering-platform)
 
 ---
 
