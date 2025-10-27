@@ -95,7 +95,12 @@ This gives **only** the permissions needed for the Chaos Engineering Platform.
         "cloudformation:DescribeStackResources",
         "cloudformation:GetTemplate",
         "cloudformation:ValidateTemplate",
-        "cloudformation:ListStacks"
+        "cloudformation:ListStacks",
+        "cloudformation:CreateChangeSet",
+        "cloudformation:ExecuteChangeSet",
+        "cloudformation:DescribeChangeSet",
+        "cloudformation:ListChangeSets",
+        "cloudformation:DeleteChangeSet"      
       ],
       "Resource": "*"
     },
@@ -110,6 +115,8 @@ This gives **only** the permissions needed for the Chaos Engineering Platform.
         "ec2:CreateSubnet",
         "ec2:DeleteSubnet",
         "ec2:DescribeSubnets",
+        "ec2:ModifySubnetAttribute",
+        "ec2:DescribeAvailabilityZones",
         "ec2:CreateInternetGateway",
         "ec2:AttachInternetGateway",
         "ec2:DetachInternetGateway",
