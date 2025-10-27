@@ -174,7 +174,7 @@ else
         --stack-name $VPC_STACK_NAME \
         --region $AWS_REGION \
         --no-fail-on-empty-changeset \
-        --capabilities CAPABILITY_IAM
+        --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
     print_success "VPC infrastructure deployed"
 fi
@@ -207,7 +207,7 @@ else
         --stack-name $TARGET_STACK_NAME \
         --region $AWS_REGION \
         --no-fail-on-empty-changeset \
-        --capabilities CAPABILITY_IAM
+        --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
 
     print_success "Target application deployed"
 fi
@@ -273,7 +273,7 @@ else
         --stack-name $LAMBDA_STACK_NAME \
         --region $AWS_REGION \
         --no-fail-on-empty-changeset \
-        --capabilities CAPABILITY_IAM \
+        --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
         --parameter-overrides \
             VPCStackName=$VPC_STACK_NAME \
             TargetStackName=$TARGET_STACK_NAME
@@ -299,7 +299,7 @@ else
         --stack-name $STEP_FUNCTIONS_STACK_NAME \
         --region $AWS_REGION \
         --no-fail-on-empty-changeset \
-        --capabilities CAPABILITY_IAM \
+        --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
         --parameter-overrides \
             LambdaStackName=$LAMBDA_STACK_NAME \
             EnableScheduling=false
