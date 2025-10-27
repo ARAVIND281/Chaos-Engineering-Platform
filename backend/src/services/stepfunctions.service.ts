@@ -6,7 +6,7 @@ import {
   GetExecutionHistoryCommand,
   ListExecutionsCommand,
   ExecutionStatus,
-} from '@aws-sdk/client-step-functions';
+} from '@aws-sdk/client-sfn';
 import { AWS_CONFIG, getStepFunctionsConfig } from '../config/aws.config';
 import { CreateExperimentRequest, ExperimentStep } from '../types/api.types';
 

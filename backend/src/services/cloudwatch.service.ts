@@ -2,6 +2,7 @@ import {
   CloudWatchClient,
   GetMetricStatisticsCommand,
   Dimension,
+  Statistic,
 } from '@aws-sdk/client-cloudwatch';
 import {
   ElasticLoadBalancingV2Client,
@@ -95,7 +96,7 @@ export const getMetricStatistics = async (
   startTime: Date,
   endTime: Date,
   period: number = 300,
-  statistics: string[] = ['Average']
+  statistics: Statistic[] = [Statistic.Average]
 ): Promise<any[]> => {
   const command = new GetMetricStatisticsCommand({
     Namespace: namespace,
@@ -155,7 +156,7 @@ export const getRequestCountMetrics = async (
     startTime,
     endTime,
     300,
-    ['Sum']
+    [Statistic.Sum]
   );
 };
 
@@ -203,7 +204,7 @@ export const getHTTP5xxErrorMetrics = async (
     startTime,
     endTime,
     300,
-    ['Sum']
+    [Statistic.Sum]
   );
 };
 
