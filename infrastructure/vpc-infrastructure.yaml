@@ -279,12 +279,15 @@ Resources:
 
   VPCFlowLog:
     Type: AWS::EC2::FlowLog
+    DependsOn:
+      - VPCFlowLogGroup
+      - VPCFlowLogRole
     Properties:
       ResourceType: VPC
       ResourceId: !Ref VPC
       TrafficType: ALL
       LogDestinationType: cloud-watch-logs
-      LogGroupName: !Ref VPCFlowLogGroup
+      LogGroupName: !Sub /aws/vpc/${ProjectName}
       DeliverLogsPermissionArn: !GetAtt VPCFlowLogRole.Arn
       Tags:
         - Key: Name
