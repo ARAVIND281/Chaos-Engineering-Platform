@@ -15,7 +15,7 @@
 
 Test your system's resilience by injecting controlled failures into your infrastructure.
 
-[🚀 Quick Start](#quick-start) • [📖 Documentation](#documentation) • [🏗️ Architecture](#️architecture) • [💡 Examples](#examples) • [🤝 Contributing](#contributing)
+[🚀 Quick Start](#-quick-start) • [📖 Documentation](#-documentation) • [🏗️ Architecture](#-architecture) • [💡 Examples](#-examples) • [🤝 Contributing](#-contributing)
 
 ---
 
