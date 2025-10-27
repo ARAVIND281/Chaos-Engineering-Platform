@@ -95,7 +95,7 @@ Resources:
         Destinations:
           - CloudWatchLogsLogGroup:
               LogGroupArn: !GetAtt StepFunctionsLogGroup.Arn
-      DefinitionString: !Sub |
+      DefinitionString: |
         {
           "Comment": "Chaos Engineering Experiment Workflow - Validates system resilience by injecting controlled failures",
           "StartAt": "LogExperimentStart",
