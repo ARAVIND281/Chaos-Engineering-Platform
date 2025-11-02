@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Beaker, BarChart3, Settings, LogOut, Activity } from 'lucide-react';
+import { Home, Beaker, BarChart3, Settings, LogOut, Activity, Heart } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ const navItems = [
   { to: '/', icon: Home, label: 'Dashboard' },
   { to: '/experiments', icon: Beaker, label: 'Experiments' },
   { to: '/results', icon: BarChart3, label: 'Results & Analytics' },
+  { to: '/system-health', icon: Heart, label: 'System Health' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 

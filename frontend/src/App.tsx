@@ -12,6 +12,7 @@ import Experiments from "./pages/Experiments";
 import NewExperiment from "./pages/NewExperiment";
 import ExperimentMonitor from "./pages/ExperimentMonitor";
 import Results from "./pages/Results";
+import SystemHealth from "./pages/SystemHealth";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="experiments/new" element={<NewExperiment />} />
               <Route path="experiments/:id/monitor" element={<ExperimentMonitor />} />
               <Route path="results" element={<Results />} />
+              <Route path="system-health" element={<SystemHealth />} />
               <Route path="settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
